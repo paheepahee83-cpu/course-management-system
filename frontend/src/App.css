@@ -1417,3 +1417,109 @@ textarea.input {
 }
 
 
+
+```css
+/* =========================================
+   Advanced Course Filters
+   ========================================= */
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+  align-items: center;
+}
+
+.filter-bar .input {
+  flex: 1;
+  min-width: 180px;
+}
+
+.clear-filter-btn {
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  background: #dc2626;
+  color: white;
+}
+
+.clear-filter-btn:hover {
+  opacity: 0.9;
+}
+
+/* =========================================
+   Active Filter Chips
+   ========================================= */
+
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.filter-label {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  background: #e2e8f0;
+  color: #334155;
+}
+
+/* =========================================
+   Result Counter
+   ========================================= */
+
+.result-count {
+  margin: 15px 0;
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* =========================================
+   Empty Filter Result
+   ========================================= */
+
+.empty .clear-filter-btn {
+  margin-top: 10px;
+}
+
+/* =========================================
+   Responsive Filters
+   ========================================= */
+
+@media (max-width: 768px) {
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-bar .input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .clear-filter-btn {
+    width: 100%;
+  }
+
+  .active-filters {
+    align-items: flex-start;
+  }
+}
+```
+
+
