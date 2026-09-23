@@ -1418,7 +1418,7 @@ textarea.input {
 
 
 
-```css
+
 /* =========================================
    Advanced Course Filters
    ========================================= */
@@ -1520,6 +1520,35 @@ textarea.input {
     align-items: flex-start;
   }
 }
-```
 
+
+/* =========================================
+   Course Form Validation - CR-002
+   ========================================= */
+
+/* Invalid input */
+.input-error {
+  border-color: var(--color-danger) !important;
+  background-color: #fffafa;
+}
+
+/* Invalid input focus */
+.input-error:focus {
+  border-color: var(--color-danger) !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
+/* Field-level validation message */
+.field-error {
+  margin: 2px 0 0;
+  color: var(--color-error-text);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+/* Save button while request is processing */
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
