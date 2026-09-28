@@ -1726,3 +1726,74 @@ textarea.input {
 
 }
 
+
+
+.session-expired-message {
+  margin: 15px 0;
+  padding: 12px 16px;
+
+  border-radius: 6px;
+
+  background: #fff7ed;
+
+  border: 1px solid #fed7aa;
+
+  color: #c2410c;
+
+  font-weight: 500;
+
+  line-height: 1.5;
+}
+
+
+
+.access-denied-container {
+  min-height: 60vh;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  padding: 40px 20px;
+}
+
+
+.access-denied-content {
+  width: 100%;
+
+  max-width: 600px;
+
+  padding: 40px;
+
+  text-align: center;
+
+  background: #ffffff;
+
+  border-radius: 10px;
+
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+
+.access-denied-content h1 {
+  margin: 0 0 15px;
+
+  color: #dc2626;
+
+  font-size: 32px;
+}
+
+
+.access-denied-content p {
+  margin: 0 0 25px;
+
+  color: #64748b;
+
+  font-size: 16px;
+
+  line-height: 1.6;
+}
+

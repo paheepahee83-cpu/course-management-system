@@ -1,169 +1,382 @@
+
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FaSearch, FaSignInAlt } from "react-icons/fa";
+
+import {
+  Link,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+
+import {
+  FaSearch,
+  FaSignInAlt,
+} from "react-icons/fa";
 
 import api from "../services/api";
-import { saveAuth } from "../services/auth";
+
+import {
+  saveAuth,
+} from "../services/auth";
+
 import Navbar from "../components/Navbar";
 
 
 function Login() {
 
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  
+ 
 
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [username, setUsername] =
+    useState("");
 
-  const navigate = useNavigate();
-  const location = useLocation();
+  const [password, setPassword] =
+    useState("");
 
-  const redirectTo = location.state?.from;
+  const [error, setError] =
+    useState("");
 
-
-  const handleSubmit = async (event) => {
-
-    // Stop the browser from reloading the whole page
-    event.preventDefault();
-
-    setError("");
-
-    // Simple client side check (the backend checks again)
-    if (!username.trim() || !password) {
-      setError("Please enter both username and password.");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-
-      const response = await api.post("/auth/login", {
-        username,
-        password,
-      });
+  const [loading, setLoading] =
+    useState(false);
 
 
-      // ---------- Save the JWT and the user ----------
-      saveAuth(response.data.token, response.data.user);
+  
+
+  const navigate =
+    useNavigate();
+
+  const location =
+    useLocation();
 
 
-      // ---------- Redirect after successful login ----------
 
-      const role = response.data.user.role;
 
-      if (redirectTo && !redirectTo.startsWith("/login")) {
+  const searchParams =
+    new URLSearchParams(
+      location.search
+    );
 
-        // Return to the page the user originally wanted
-        navigate(redirectTo);
 
-      } else if (role === "admin") {
+  const sessionExpired =
+    searchParams.get(
+      "sessionExpired"
+    ) === "true";
 
-        // Normal admin login
-        navigate("/admin");
 
-      } else {
+ 
 
-        // Normal student login
-        navigate("/student");
+  const sessionExpiredFrom =
+    sessionStorage.getItem(
+      "sessionExpiredFrom"
+    );
 
-      }
 
-    } catch (error) {
+  const protectedRouteFrom =
+    location.state?.from;
 
-      // error.response exists when the SERVER answered (400, 401, 500).
-      // It is undefined when the request never reached the server.
-      if (error.response) {
+
+  const redirectTo =
+    sessionExpiredFrom ||
+    protectedRouteFrom ||
+    null;
+
+
+
+
+  const handleSubmit =
+    async (event) => {
+
+    
+      event.preventDefault();
+
+
+   
+      setError("");
+
+
+
+      if (
+        !username.trim() ||
+        !password
+      ) {
 
         setError(
-          error.response.data?.message ||
-          `Login failed (status ${error.response.status})`
+          "Please enter both username and password."
         );
 
-      } else {
-
-        setError(
-          "Cannot reach the server. Please check that the backend is running on http://localhost:3000"
-        );
-
+        return;
       }
 
-    } finally {
 
-      // Always stop the loading state, success or failure
-      setLoading(false);
+      setLoading(true);
 
-    }
-  };
+
+      try {
+
+      
+
+        const response =
+          await api.post(
+            "/auth/login",
+            {
+              username,
+              password,
+            }
+          );
+
+
+       
+
+        saveAuth(
+          response.data.token,
+          response.data.user
+        );
+
+
+       
+
+        if (
+          redirectTo &&
+          !redirectTo.startsWith("/login")
+        ) {
+
+          sessionStorage.removeItem(
+            "sessionExpiredFrom"
+          );
+
+
+          navigate(
+            redirectTo,
+            {
+              replace: true,
+            }
+          );
+
+
+          return;
+        }
+
+
+       
+
+        const role =
+          response.data.user.role;
+
+
+        if (role === "admin") {
+
+          navigate(
+            "/admin",
+            {
+              replace: true,
+            }
+          );
+
+        } else {
+
+          navigate(
+            "/student",
+            {
+              replace: true,
+            }
+          );
+        }
+
+
+      } catch (error) {
+
+
+        if (
+          error.response?.status === 401
+        ) {
+
+          setError(
+            "Invalid username or password"
+          );
+
+
+        } else if (
+          error.response
+        ) {
+
+          setError(
+            error.response.data?.message ||
+            `Login failed (status ${error.response.status})`
+          );
+
+
+        } else {
+
+         
+
+          setError(
+            "Cannot reach the server. Please check that the backend is running on http://localhost:3000"
+          );
+        }
+
+      } finally {
+
+        setLoading(false);
+      }
+    };
+
 
 
   return (
 
     <>
+
       <Navbar />
+
 
       <div className="login-container">
 
-        <h1>Login</h1>
+        <h1>
+          Login
+        </h1>
+
 
         <p className="login-subtitle">
           Sign in to enroll in courses.
         </p>
 
 
-        <form onSubmit={handleSubmit}>
+      
+
+        {sessionExpired && (
+
+          <div
+            className="session-expired-message"
+            role="alert"
+          >
+
+            Your session has expired.
+            Please log in again.
+
+          </div>
+
+        )}
+
+
+    
+        <form
+          onSubmit={handleSubmit}
+        >
+
+
+          
 
           <div className="form-group">
-            <label htmlFor="username">Username</label>
+
+            <label htmlFor="username">
+              Username
+            </label>
+
 
             <input
               id="username"
               type="text"
               value={username}
-              onChange={(event) => setUsername(event.target.value)}
+
+              onChange={(event) =>
+                setUsername(
+                  event.target.value
+                )
+              }
+
               placeholder="Enter username"
+
               autoComplete="username"
+
               disabled={loading}
             />
+
           </div>
 
 
+         
+
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+
+            <label htmlFor="password">
+              Password
+            </label>
+
 
             <input
               id="password"
               type="password"
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+
+              onChange={(event) =>
+                setPassword(
+                  event.target.value
+                )
+              }
+
               placeholder="Enter password"
+
               autoComplete="current-password"
+
               disabled={loading}
             />
+
           </div>
 
 
+       
+
           {error && (
-            <p className="error">{error}</p>
+
+            <p
+              className="error"
+              role="alert"
+            >
+              {error}
+            </p>
+
           )}
 
 
+       
+
           <button
             type="submit"
+
             className="btn btn-primary btn-block"
+
             disabled={loading}
           >
+
             <FaSignInAlt />
-            {loading ? "Logging in..." : "Login"}
+
+            {loading
+              ? "Logging in..."
+              : "Login"}
+
           </button>
+
 
         </form>
 
 
+        
+
         <p className="login-footer">
+
           Not sure where to go?{" "}
-          <Link to="/courses"><FaSearch /> Browse the courses</Link> first.
+
+          <Link to="/courses">
+
+            <FaSearch />
+
+            {" "}Browse the courses
+
+          </Link>{" "}
+
+          first.
+
         </p>
+
 
       </div>
 
@@ -171,4 +384,6 @@ function Login() {
   );
 }
 
+
 export default Login;
+

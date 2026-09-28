@@ -1,43 +1,107 @@
-import { Navigate, useLocation } from "react-router-dom";
 
-import { getUser, getToken } from "../services/auth";
+import {
+  Navigate,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+
+import {
+  getUser,
+  getToken,
+} from "../services/auth";
 
 
-function ProtectedRoute({ children, role }) {
+function ProtectedRoute({
+  children,
+  role,
+}) {
 
-  const location = useLocation();
+  const location =
+    useLocation();
 
-  const token = getToken();
-  const user = getUser();
+  const navigate =
+    useNavigate();
 
 
-  // ---------- 1. Not logged in ----------
+  const token =
+    getToken();
+
+  const user =
+    getUser();
+
+
+ 
+
   if (!token || !user) {
+
     return (
+
       <Navigate
         to="/login"
-        state={{ from: location.pathname }}
+
+        state={{
+          from:
+            location.pathname +
+            location.search +
+            location.hash,
+        }}
+
         replace
       />
+
     );
   }
 
 
-  // ---------- 2. Logged in but wrong role ----------
-  if (role && user.role !== role) {
+  
 
-    // A student who opens /admin is sent to the student area and the
-    // other way around.
-    const fallback =
-      user.role === "admin" ? "/admin" : "/student";
+  if (
+    role &&
+    user.role !== role
+  ) {
 
-    return <Navigate to={fallback} replace />;
+    return (
+
+      <div className="access-denied-container">
+
+        <div className="access-denied-content">
+
+          <h1>
+            Access Denied
+          </h1>
+
+
+          <p>
+            Access denied. You do not have
+            permission to access this page.
+          </p>
+
+
+          <button
+            type="button"
+
+            className="btn btn-primary"
+
+            onClick={() =>
+              navigate(-1)
+            }
+          >
+            Go Back
+          </button>
+
+        </div>
+
+      </div>
+
+    );
   }
 
 
-  // ---------- 3. Allowed ----------
+
+
   return children;
 }
+
 
 export default ProtectedRoute;
 
