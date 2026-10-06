@@ -35,39 +35,68 @@ function CourseDetails() {
   // STATE
   // ====================================================
 
-  const [course, setCourse] =
-    useState(null);
+  const [course, setCourse] = useState(null);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
-  const [success, setSuccess] =
-    useState("");
+  const [success, setSuccess] = useState("");
 
-  const [enrolling, setEnrolling] =
-    useState(false);
+  const [enrolling, setEnrolling] = useState(false);
 
-  const [enrolled, setEnrolled] =
-    useState(false);
-
+  const [enrolled, setEnrolled] = useState(false);
 
 
   // ====================================================
   // LOGIN / ROLE
   // ====================================================
 
-  const loggedIn =
-    isLoggedIn();
+  const loggedIn = isLoggedIn();
 
-  const studentLoggedIn =
-    isStudent();
+  const studentLoggedIn = isStudent();
 
-  const adminLoggedIn =
-    isAdmin();
+  const adminLoggedIn = isAdmin();
 
+
+  // ====================================================
+  // CAPACITY
+  // ====================================================
+
+  const hasCapacityLimit =
+    course &&
+    course.max_students !== null &&
+    course.max_students !== undefined;
+
+
+  const enrolledCount =
+    course?.enrolled_count !== null &&
+    course?.enrolled_count !== undefined
+      ? Number(course.enrolled_count)
+      : 0;
+
+
+  const maxStudents =
+    hasCapacityLimit
+      ? Number(course.max_students)
+      : null;
+
+
+  const seatsRemaining =
+    hasCapacityLimit
+      ? Math.max(
+          maxStudents - enrolledCount,
+          0
+        )
+      : null;
+
+
+  const isFull =
+    hasCapacityLimit &&
+    (
+      course?.is_full === true ||
+      seatsRemaining <= 0
+    );
 
 
   // ====================================================
@@ -104,7 +133,6 @@ function CourseDetails() {
         setCourse(
           loadedCourse
         );
-
 
 
         // ------------------------------------------------
@@ -187,7 +215,6 @@ function CourseDetails() {
   ]);
 
 
-
   // ====================================================
   // ENROLL
   // ====================================================
@@ -217,17 +244,84 @@ function CourseDetails() {
       );
 
 
-      // Course is now enrolled
+      // Student is now enrolled
       setEnrolled(true);
 
+
+      // ------------------------------------------------
+      // Refresh course capacity
+      // ------------------------------------------------
+
+      try {
+
+        const courseResponse =
+          await api.get(
+            `/courses/${id}`
+          );
+
+
+        setCourse(
+          courseResponse.data.course
+        );
+
+      } catch (refreshError) {
+
+        console.error(
+          "Failed to refresh course availability:",
+          refreshError.message
+        );
+
+      }
 
     } catch (error) {
 
       // ------------------------------------------------
-      // Already enrolled
+      // COURSE FULL
       // ------------------------------------------------
 
       if (
+        error.response?.status === 409 &&
+        error.response?.data?.message
+          ?.toLowerCase()
+          .includes("full")
+      ) {
+
+        setError(
+          error.response.data.message
+        );
+
+        // Refresh availability because
+        // another student may have taken
+        // the final seat.
+
+        try {
+
+          const courseResponse =
+            await api.get(
+              `/courses/${id}`
+            );
+
+
+          setCourse(
+            courseResponse.data.course
+          );
+
+        } catch (refreshError) {
+
+          console.error(
+            "Failed to refresh course availability:",
+            refreshError.message
+          );
+
+        }
+
+      }
+
+      // ------------------------------------------------
+      // ALREADY ENROLLED
+      // ------------------------------------------------
+
+      else if (
         error.response?.status === 409
       ) {
 
@@ -237,7 +331,13 @@ function CourseDetails() {
           "You are already enrolled in this course. You can see it in My Enrollments."
         );
 
-      } else {
+      }
+
+      // ------------------------------------------------
+      // OTHER ERROR
+      // ------------------------------------------------
+
+      else {
 
         setError(
           error.response?.data?.message ||
@@ -253,7 +353,6 @@ function CourseDetails() {
     }
 
   };
-
 
 
   // ====================================================
@@ -285,7 +384,6 @@ function CourseDetails() {
     );
 
   }
-
 
 
   // ====================================================
@@ -331,7 +429,6 @@ function CourseDetails() {
     );
 
   }
-
 
 
   // ====================================================
@@ -439,7 +536,9 @@ function CourseDetails() {
 
 
 
-            {/* Course information */}
+            {/* ==================================================
+                COURSE INFORMATION
+            ================================================== */}
 
             <dl className="details-list">
 
@@ -498,7 +597,124 @@ function CourseDetails() {
               </div>
 
 
+              {/* ==================================================
+                  ENROLLMENT / CAPACITY
+              ================================================== */}
+
+              <div>
+
+                <dt>
+                  Enrollment
+                </dt>
+
+                <dd>
+
+                  {hasCapacityLimit ? (
+
+                    <>
+
+                      <strong>
+                        {enrolledCount} / {maxStudents}
+                      </strong>
+
+                      {" students"}
+
+                    </>
+
+                  ) : (
+
+                    <strong>
+                      Unlimited
+                    </strong>
+
+                  )}
+
+                </dd>
+
+              </div>
+
+
+              {/* ==================================================
+                  SEATS REMAINING
+              ================================================== */}
+
+              <div>
+
+                <dt>
+                  Availability
+                </dt>
+
+                <dd>
+
+                  {hasCapacityLimit ? (
+
+                    isFull ? (
+
+                      <span className="error">
+
+                        Course Full
+
+                      </span>
+
+                    ) : (
+
+                      <span className="success">
+
+                        {seatsRemaining}{" "}
+                        {seatsRemaining === 1
+                          ? "seat"
+                          : "seats"}{" "}
+                        remaining
+
+                      </span>
+
+                    )
+
+                  ) : (
+
+                    <span className="success">
+
+                      Unlimited
+
+                    </span>
+
+                  )}
+
+                </dd>
+
+              </div>
+
+
             </dl>
+
+
+
+            {/* ==================================================
+                FULL COURSE NOTICE
+            ================================================== */}
+
+            {isFull && !enrolled && (
+
+              <div className="notice">
+
+                <p className="error">
+
+                  <strong>
+                    Course Full
+                  </strong>
+                </p>
+
+                <p>
+
+                  This course has reached its
+                  maximum enrollment capacity.
+                  No seats are currently available.
+
+                </p>
+
+              </div>
+
+            )}
 
 
 
@@ -615,10 +831,28 @@ function CourseDetails() {
 
                     </div>
 
+                  ) : isFull ? (
+
+                    /* --------------------------------------------
+                       COURSE FULL
+                    -------------------------------------------- */
+
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-lg"
+                      disabled
+                    >
+
+                      <FaShoppingCart />
+
+                      Course Full
+
+                    </button>
+
                   ) : (
 
                     /* --------------------------------------------
-                       NOT ENROLLED
+                       AVAILABLE
                     -------------------------------------------- */
 
                     <button
