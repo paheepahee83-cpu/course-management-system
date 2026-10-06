@@ -1797,3 +1797,47 @@ textarea.input {
   line-height: 1.6;
 }
 
+/* =========================================================
+   CR-006 - Student Enrollment Cancellation
+   ========================================================= */
+
+.btn-danger {
+  background-color: #dc2626;
+  color: #ffffff;
+  border: 1px solid #dc2626;
+}
+
+.btn-danger:hover {
+  background-color: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+
+.btn-block {
+  width: 100%;
+}
+
+
+.success {
+  color: #15803d;
+  background-color: #dcfce7;
+  border: 1px solid #86efac;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin: 15px 0;
+}
+
+
+.error {
+  color: #b91c1c;
+  background-color: #fee2e2;
+  border: 1px solid #fca5a5;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin: 15px 0;
+}

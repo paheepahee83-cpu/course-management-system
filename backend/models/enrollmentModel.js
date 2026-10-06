@@ -1,9 +1,14 @@
 const db = require("../config/db");
 
+
 const Enrollment = {
 
-  // Create enrollment
+  // ====================================================
+  // CREATE ENROLLMENT
+  // ====================================================
+
   async create(studentId, courseId) {
+
     const [result] = await db.execute(
       `INSERT INTO enrollments
        (student_id, course_id)
@@ -11,26 +16,42 @@ const Enrollment = {
       [studentId, courseId]
     );
 
+
     return result.insertId;
   },
 
 
-  // Check if student is already enrolled
-  async findByStudentAndCourse(studentId, courseId) {
+  // ====================================================
+  // CHECK EXISTING ENROLLMENT
+  // ====================================================
+
+  async findByStudentAndCourse(
+    studentId,
+    courseId
+  ) {
+
     const [rows] = await db.execute(
       `SELECT *
        FROM enrollments
        WHERE student_id = ?
        AND course_id = ?`,
-      [studentId, courseId]
+      [
+        studentId,
+        courseId
+      ]
     );
+
 
     return rows[0];
   },
 
 
-  // Get all courses enrolled by a student
+  // ====================================================
+  // GET MY ENROLLMENTS
+  // ====================================================
+
   async getByStudent(studentId) {
+
     const [rows] = await db.execute(
       `SELECT
           e.id,
@@ -43,20 +64,29 @@ const Enrollment = {
           c.price,
           c.image,
           c.description
+
        FROM enrollments e
+
        JOIN courses c
          ON e.course_id = c.id
+
        WHERE e.student_id = ?
+
        ORDER BY e.enrolled_at DESC`,
       [studentId]
     );
+
 
     return rows;
   },
 
 
-  // Get all students enrolled in a course
+  // ====================================================
+  // GET COURSE ENROLLMENTS
+  // ====================================================
+
   async getByCourse(courseId) {
+
     const [rows] = await db.execute(
       `SELECT
           e.id,
@@ -64,20 +94,29 @@ const Enrollment = {
           u.id AS student_id,
           u.username,
           u.full_name
+
        FROM enrollments e
+
        JOIN users u
          ON e.student_id = u.id
+
        WHERE e.course_id = ?
+
        ORDER BY e.enrolled_at DESC`,
       [courseId]
     );
+
 
     return rows;
   },
 
 
-  // Get all enrollments
+  // ====================================================
+  // GET ALL ENROLLMENTS
+  // ====================================================
+
   async getAll() {
+
     const [rows] = await db.execute(
       `SELECT
           e.id,
@@ -103,21 +142,65 @@ const Enrollment = {
        ORDER BY e.enrolled_at DESC`
     );
 
+
     return rows;
   },
 
 
-  // Delete enrollment
+  // ====================================================
+  // ADMIN DELETE
+  // ====================================================
+
   async delete(id) {
+
     const [result] = await db.execute(
       `DELETE FROM enrollments
        WHERE id = ?`,
       [id]
     );
 
+
+    return result;
+  },
+
+
+  // ====================================================
+  // STUDENT DELETE
+  // ====================================================
+  //
+  // SECURITY:
+  // Checks BOTH enrollment ID and student ID.
+  //
+  // This prevents:
+  //
+  // Student A
+  //     ↓
+  // trying to delete
+  //     ↓
+  // Student B's enrollment
+  //
+  // ====================================================
+
+  async deleteByStudent(
+    enrollmentId,
+    studentId
+  ) {
+
+    const [result] = await db.execute(
+      `DELETE FROM enrollments
+       WHERE id = ?
+       AND student_id = ?`,
+      [
+        enrollmentId,
+        studentId
+      ]
+    );
+
+
     return result;
   },
 
 };
+
 
 module.exports = Enrollment;

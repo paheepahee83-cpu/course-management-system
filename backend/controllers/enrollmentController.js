@@ -1,13 +1,20 @@
 const Enrollment = require("../models/enrollmentModel");
 const Course = require("../models/courseModel");
 
-// Enroll in a course
+
+// ======================================================
+// STUDENT - ENROLL IN COURSE
+// ======================================================
+
 const enrollInCourse = async (req, res) => {
   try {
     const { courseId } = req.body;
 
-    // Logged-in student's ID
+    // IMPORTANT:
+    // Student ID comes from authenticated user.
+    // Never trust student ID from frontend.
     const studentId = req.user.id;
+
 
     // Check course ID
     if (!courseId) {
@@ -16,6 +23,7 @@ const enrollInCourse = async (req, res) => {
       });
     }
 
+
     // Check whether course exists
     const course = await Course.getById(courseId);
 
@@ -24,6 +32,7 @@ const enrollInCourse = async (req, res) => {
         message: "Course not found",
       });
     }
+
 
     // Check whether student is already enrolled
     const existingEnrollment =
@@ -32,11 +41,13 @@ const enrollInCourse = async (req, res) => {
         courseId
       );
 
+
     if (existingEnrollment) {
       return res.status(409).json({
         message: "You are already enrolled in this course",
       });
     }
+
 
     // Create enrollment
     const enrollmentId = await Enrollment.create(
@@ -44,117 +55,123 @@ const enrollInCourse = async (req, res) => {
       courseId
     );
 
-    res.status(201).json({
+
+    return res.status(201).json({
       message: "Course enrollment successful",
       enrollmentId,
     });
 
   } catch (error) {
+
     console.error(
       "Error enrolling in course:",
       error.message
     );
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Internal server error",
     });
   }
 };
 
 
-// Get logged-in student's courses
+
+// ======================================================
+// STUDENT - GET MY ENROLLMENTS
+// ======================================================
+
 const getMyEnrollments = async (req, res) => {
   try {
+
+    // IMPORTANT:
+    // Get student ID from authenticated user.
     const studentId = req.user.id;
+
 
     const enrollments =
       await Enrollment.getByStudent(studentId);
 
-    res.status(200).json({
+
+    return res.status(200).json({
       message: "Enrollments retrieved successfully",
       enrollments,
     });
 
   } catch (error) {
+
     console.error(
       "Error getting student enrollments:",
       error.message
     );
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Internal server error",
     });
   }
 };
 
 
-// Get students enrolled in a course
-const getCourseEnrollments = async (req, res) => {
+
+// ======================================================
+// STUDENT - CANCEL OWN ENROLLMENT
+// ======================================================
+
+const cancelMyEnrollment = async (req, res) => {
   try {
-    const { courseId } = req.params;
 
-    // Check whether course exists
-    const course = await Course.getById(courseId);
+    const { id } = req.params;
 
-    if (!course) {
-      return res.status(404).json({
-        message: "Course not found",
+
+    // --------------------------------------------------
+    // Validate enrollment ID
+    // --------------------------------------------------
+
+    if (!/^\d+$/.test(id)) {
+      return res.status(400).json({
+        message: "Invalid enrollment ID",
       });
     }
 
-    const enrollments =
-      await Enrollment.getByCourse(courseId);
 
-    res.status(200).json({
-      message: "Course enrollments retrieved successfully",
-      course,
-      enrollments,
-    });
-
-  } catch (error) {
-    console.error(
-      "Error getting course enrollments:",
-      error.message
-    );
-
-    res.status(500).json({
-      message: "Internal server error",
-    });
-  }
-};
+    const enrollmentId = Number(id);
 
 
-// Get all enrollments
-const getAllEnrollments = async (req, res) => {
-  try {
-    const enrollments =
-      await Enrollment.getAll();
+    // --------------------------------------------------
+    // IMPORTANT SECURITY CHECK
+    // --------------------------------------------------
+    // Student ID MUST come from req.user.id.
+    //
+    // Do NOT use:
+    // req.body.studentId
+    // req.params.studentId
+    // req.query.studentId
+    // --------------------------------------------------
 
-    res.status(200).json({
-      message: "All enrollments retrieved successfully",
-      enrollments,
-    });
-
-  } catch (error) {
-    console.error(
-      "Error getting all enrollments:",
-      error.message
-    );
-
-    res.status(500).json({
-      message: "Internal server error",
-    });
-  }
-};
+    const studentId = req.user.id;
 
 
-// Delete enrollment
-const deleteEnrollment = async (req, res) => {
-  try {
-    const { id } = req.params;
+    // --------------------------------------------------
+    // Delete only if:
+    //
+    // enrollment ID matches
+    // AND
+    // enrollment belongs to logged-in student
+    // --------------------------------------------------
 
     const result =
-      await Enrollment.delete(id);
+      await Enrollment.deleteByStudent(
+        enrollmentId,
+        studentId
+      );
+
+
+    // --------------------------------------------------
+    // 404:
+    // - enrollment does not exist
+    // - enrollment belongs to another student
+    //
+    // Both cases return 404.
+    // --------------------------------------------------
 
     if (result.affectedRows === 0) {
       return res.status(404).json({
@@ -162,26 +179,155 @@ const deleteEnrollment = async (req, res) => {
       });
     }
 
-    res.status(200).json({
-      message: "Enrollment deleted successfully",
+
+    // --------------------------------------------------
+    // Successful cancellation
+    // --------------------------------------------------
+
+    return res.status(200).json({
+      message: "Enrollment cancelled successfully",
     });
 
   } catch (error) {
+
     console.error(
-      "Error deleting enrollment:",
+      "Error cancelling enrollment:",
       error.message
     );
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Internal server error",
     });
   }
 };
 
 
+
+// ======================================================
+// ADMIN - GET COURSE ENROLLMENTS
+// ======================================================
+
+const getCourseEnrollments = async (req, res) => {
+  try {
+
+    const { courseId } = req.params;
+
+
+    // Check whether course exists
+    const course = await Course.getById(courseId);
+
+
+    if (!course) {
+      return res.status(404).json({
+        message: "Course not found",
+      });
+    }
+
+
+    const enrollments =
+      await Enrollment.getByCourse(courseId);
+
+
+    return res.status(200).json({
+      message: "Course enrollments retrieved successfully",
+      course,
+      enrollments,
+    });
+
+  } catch (error) {
+
+    console.error(
+      "Error getting course enrollments:",
+      error.message
+    );
+
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};
+
+
+
+// ======================================================
+// ADMIN - GET ALL ENROLLMENTS
+// ======================================================
+
+const getAllEnrollments = async (req, res) => {
+  try {
+
+    const enrollments =
+      await Enrollment.getAll();
+
+
+    return res.status(200).json({
+      message: "All enrollments retrieved successfully",
+      enrollments,
+    });
+
+  } catch (error) {
+
+    console.error(
+      "Error getting all enrollments:",
+      error.message
+    );
+
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};
+
+
+
+// ======================================================
+// ADMIN - DELETE ENROLLMENT
+// ======================================================
+
+const deleteEnrollment = async (req, res) => {
+  try {
+
+    const { id } = req.params;
+
+
+    const result =
+      await Enrollment.delete(id);
+
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        message: "Enrollment not found",
+      });
+    }
+
+
+    return res.status(200).json({
+      message: "Enrollment deleted successfully",
+    });
+
+  } catch (error) {
+
+    console.error(
+      "Error deleting enrollment:",
+      error.message
+    );
+
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};
+
+
+
+// ======================================================
+// EXPORTS
+// ======================================================
+
 module.exports = {
   enrollInCourse,
   getMyEnrollments,
+  cancelMyEnrollment,
   getCourseEnrollments,
   getAllEnrollments,
   deleteEnrollment,
