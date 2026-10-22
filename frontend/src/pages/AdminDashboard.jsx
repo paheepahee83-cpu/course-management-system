@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -12,148 +13,204 @@ import { getUser } from "../services/auth";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
+const emptyReport = {
+  totalCourses: 0,
+  totalStudents: 0,
+  totalEnrollments: 0,
+  studentsWithEnrollments: 0,
+  enrollmentsLast30Days: 0,
+  categoryBreakdown: [],
+  topCourses: [],
+  coursesWithoutEnrollments: 0,
+  recentEnrollments: [],
+};
+
 function AdminDashboard() {
-
-  const [stats, setStats] = useState({
-    courseCount: 0,
-    studentCount: 0,
-  });
-
-  const [enrollments, setEnrollments] = useState([]);
-
+  const [report, setReport] = useState(emptyReport);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const user = getUser();
 
-
   useEffect(() => {
+    let active = true;
 
     const loadDashboard = async () => {
-
       try {
+        const response = await api.get("/reports/overview");
 
-        const [statsResponse, enrollmentsResponse] = await Promise.all([
-          api.get("/courses/stats"),
-          api.get("/enrollments"),
-        ]);
-
-        setStats({
-          courseCount: statsResponse.data.courseCount,
-          studentCount: statsResponse.data.studentCount,
-        });
-
-        setEnrollments(enrollmentsResponse.data.enrollments);
-
-      } catch (error) {
-
-        setError(
-          error.response?.data?.message ||
-          "Failed to load the dashboard data"
-        );
-
+        if (active) {
+          setReport({
+            ...emptyReport,
+            ...(response.data.report || {}),
+          });
+        }
+      } catch (err) {
+        if (active) {
+          setError(
+            err.response?.data?.message ||
+              "Failed to load reporting data."
+          );
+        }
       } finally {
-
-        setLoading(false);
-
+        if (active) {
+          setLoading(false);
+        }
       }
     };
 
     loadDashboard();
 
+    return () => {
+      active = false;
+    };
   }, []);
-
-
-  // ---------- Derived values ----------
-
-  // How many DIFFERENT students have at least one enrollment
-  const uniqueStudents = new Set(
-    enrollments.map((enrollment) => enrollment.student_id)
-  ).size;
-
-  // The 6 most recent enrollments (the backend already sorts by date DESC)
-  const recentEnrollments = enrollments.slice(0, 6);
-
 
   const formatDate = (value) => {
     if (!value) return "-";
 
-    return new Date(value).toLocaleDateString();
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime())
+      ? "-"
+      : date.toLocaleDateString();
   };
 
+  const maxCategoryCount = Math.max(
+    1,
+    ...report.categoryBreakdown.map(
+      (item) => Number(item.enrollmentCount) || 0
+    )
+  );
+
+  const statistics = [
+    ["Total Courses", report.totalCourses],
+    ["Total Students", report.totalStudents],
+    ["Total Enrollments", report.totalEnrollments],
+    ["Students with Enrollments", report.studentsWithEnrollments],
+    ["Enrollments in Last 30 Days", report.enrollmentsLast30Days],
+    ["Courses without Enrollments", report.coursesWithoutEnrollments],
+  ];
 
   return (
-
     <>
       <Navbar />
 
-      <div className="container">
-
-        {/* ---------- Welcome ---------- */}
-
+      <main className="container">
         <div className="page-header">
-
           <div>
             <h1>Admin Dashboard</h1>
-
             <p className="page-subtitle">
-              Welcome back, {user?.full_name || user?.username}. Here is
-              an overview of the system.
+              Welcome back, {user?.full_name || user?.username}.
+              Here is an overview of the system.
             </p>
           </div>
 
           <Link to="/admin/courses" className="btn btn-primary">
-            <FaChartBar />
-            Manage Courses
+            <FaChartBar /> Manage Courses
           </Link>
-
         </div>
 
+        {error && (
+          <div className="error" role="alert">
+            {error}
+          </div>
+        )}
 
-        {error && <p className="error">{error}</p>}
-
-
-        {/* ---------- Stat cards ---------- */}
-
+        {/* CR-009: Reporting summary */}
         <div className="dashboard-grid">
-
-          <div className="dashboard-card">
-            <span className="dashboard-card-value">
-              {loading ? "..." : stats.courseCount}
-            </span>
-            <span className="dashboard-card-label">Total Courses</span>
-          </div>
-
-          <div className="dashboard-card">
-            <span className="dashboard-card-value">
-              {loading ? "..." : stats.studentCount}
-            </span>
-            <span className="dashboard-card-label">Total Students</span>
-          </div>
-
-          <div className="dashboard-card">
-            <span className="dashboard-card-value">
-              {loading ? "..." : enrollments.length}
-            </span>
-            <span className="dashboard-card-label">Total Enrollments</span>
-          </div>
-
-          <div className="dashboard-card">
-            <span className="dashboard-card-value">
-              {loading ? "..." : uniqueStudents}
-            </span>
-            <span className="dashboard-card-label">
-              Students with Enrollments
-            </span>
-          </div>
-
+          {statistics.map(([label, value]) => (
+            <div className="dashboard-card" key={label}>
+              <span className="dashboard-card-value">
+                {loading ? "..." : Number(value) || 0}
+              </span>
+              <span className="dashboard-card-label">{label}</span>
+            </div>
+          ))}
         </div>
 
-
-        {/* ---------- Recent enrollments ---------- */}
-
+        {/* Category breakdown */}
         <section className="section-card">
+          <div className="section-card-header">
+            <h2>Enrollments by Category</h2>
+          </div>
 
+          {loading ? (
+            <p className="loading">Loading category report...</p>
+          ) : report.categoryBreakdown.length === 0 ? (
+            <p className="empty">No categories available.</p>
+          ) : (
+            <div className="report-bars">
+              {report.categoryBreakdown.map((item, index) => {
+                const count = Number(item.enrollmentCount) || 0;
+                const width = (count / maxCategoryCount) * 100;
+
+                return (
+                  <div
+                    className="report-bar-item"
+                    key={`${item.category}-${index}`}
+                  >
+                    <div className="report-bar-heading">
+                      <span>{item.category || "Uncategorized"}</span>
+                      <strong>{count}</strong>
+                    </div>
+
+                    <div
+                      className="report-bar-track"
+                      role="img"
+                      aria-label={`${item.category}: ${count} enrollments`}
+                    >
+                      <div
+                        className="report-bar-fill"
+                        style={{ width: `${width}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Top five courses */}
+        <section className="section-card">
+          <div className="section-card-header">
+            <h2>Top Five Courses by Enrollment</h2>
+          </div>
+
+          {loading ? (
+            <p className="loading">Loading top courses...</p>
+          ) : report.topCourses.length === 0 ? (
+            <p className="empty">No courses available.</p>
+          ) : (
+            <div className="table-wrapper">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Course</th>
+                    <th>Category</th>
+                    <th>Enrollments</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {report.topCourses.map((course, index) => (
+                    <tr key={course.courseId}>
+                      <td>{index + 1}</td>
+                      <td>{course.title}</td>
+                      <td>{course.category}</td>
+                      <td>{Number(course.enrollmentCount) || 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        {/* Recent enrollments */}
+        <section className="section-card">
           <div className="section-card-header">
             <h2>Recent Enrollments</h2>
 
@@ -162,18 +219,11 @@ function AdminDashboard() {
             </Link>
           </div>
 
-
-          {loading && <p className="loading">Loading...</p>}
-
-
-          {!loading && recentEnrollments.length === 0 && (
-            <p className="empty">
-              No enrollments have been made yet.
-            </p>
-          )}
-
-
-          {!loading && recentEnrollments.length > 0 && (
+          {loading ? (
+            <p className="loading">Loading enrollments...</p>
+          ) : report.recentEnrollments.length === 0 ? (
+            <p className="empty">No enrollments have been made yet.</p>
+          ) : (
             <div className="table-wrapper">
               <table className="table">
                 <thead>
@@ -188,15 +238,17 @@ function AdminDashboard() {
                 </thead>
 
                 <tbody>
-                  {recentEnrollments.map((enrollment) => (
+                  {report.recentEnrollments.map((enrollment) => (
                     <tr key={enrollment.id}>
                       <td>{enrollment.full_name}</td>
                       <td>{enrollment.username}</td>
                       <td>{enrollment.title}</td>
-                      <td>{enrollment.category}</td>
+                      <td>
+                        {enrollment.category || "Uncategorized"}
+                      </td>
                       <td>
                         <span className="tag tag-level">
-                          {enrollment.level}
+                          {enrollment.level || "-"}
                         </span>
                       </td>
                       <td>{formatDate(enrollment.enrolled_at)}</td>
@@ -206,20 +258,15 @@ function AdminDashboard() {
               </table>
             </div>
           )}
-
         </section>
 
-
-        {/* ---------- Admin shortcuts ---------- */}
-
+        {/* Administration shortcuts */}
         <section className="section-card">
-
           <div className="section-card-header">
             <h2>Administration</h2>
           </div>
 
           <div className="quick-actions">
-
             <Link to="/admin/courses" className="quick-action">
               <span className="quick-action-icon"><FaBook /></span>
               <span>Add, edit and delete courses</span>
@@ -234,15 +281,11 @@ function AdminDashboard() {
               <span className="quick-action-icon"><FaSearch /></span>
               <span>See the public course list</span>
             </Link>
-
           </div>
-
         </section>
-
-      </div>
+      </main>
 
       <Footer />
-
     </>
   );
 }
