@@ -1,8 +1,16 @@
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 
-const password = "123456";
+const SALT_ROUNDS = 10;
 
-// 10 = bcrypt's cost/salt-round setting.
-bcrypt.hash(password, 10, (err, hash) => {
-    console.log(hash);
-});
+async function hashPassword(password) {
+    return await bcrypt.hash(password, SALT_ROUNDS);
+}
+
+async function comparePassword(password, hashedPassword) {
+    return await bcrypt.compare(password, hashedPassword);
+}
+
+module.exports = {
+    hashPassword,
+    comparePassword
+};

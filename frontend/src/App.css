@@ -1575,3 +1575,37 @@ textarea.input {
     font-size: 1rem;
   }
 }
+
+
+
+/* CR-010: Profile page */
+.profile-page {
+  padding-bottom: 40px;
+}
+
+.profile-page .section-card {
+  margin-bottom: 24px;
+}
+
+.profile-page .form-group {
+  margin-bottom: 18px;
+}
+
+.profile-page .form-group input {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 520px;
+}
+
+.profile-page .success {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #ecfdf5;
+  color: #166534;
+}
+
+.profile-page .error {
+  margin-top: 6px;
+  color: #b91c1c;
+}
